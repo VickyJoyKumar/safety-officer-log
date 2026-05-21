@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Safety Officer Log - Mobile Test</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f3f7fb;
+        --panel: #ffffff;
+        --ink: #14324a;
+        --muted: #5a7287;
+        --accent: #0f8a6a;
+        --accent-dark: #0b7056;
+        --border: #d7e2ec;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Tahoma, sans-serif;
+        background: radial-gradient(circle at 15% 0%, #e7f8f3 0%, var(--bg) 40%, #edf3ff 100%);
+        color: var(--ink);
+      }
+
+      .wrap {
+        max-width: 560px;
+        margin: 0 auto;
+        min-height: 100dvh;
+        padding: 20px;
+        display: grid;
+        place-items: center;
+      }
+
+      .card {
+        width: 100%;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 20px;
+        box-shadow: 0 14px 28px rgba(16, 44, 67, 0.12);
+      }
+
+      h1 {
+        margin: 0 0 10px;
+        font-size: 1.35rem;
+        line-height: 1.3;
+      }
+
+      p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.45;
+      }
+
+      .btn {
+        display: inline-block;
+        width: 100%;
+        margin: 16px 0 14px;
+        padding: 14px 16px;
+        border-radius: 12px;
+        border: 0;
+        background: var(--accent);
+        color: #fff;
+        font-weight: 700;
+        text-decoration: none;
+        text-align: center;
+      }
+
+      .btn:active {
+        background: var(--accent-dark);
+      }
+
+      .box {
+        border: 1px solid var(--border);
+        background: #f8fbff;
+        border-radius: 12px;
+        padding: 12px;
+      }
+
+      ol {
+        margin: 8px 0 0 18px;
+        padding: 0;
+        color: var(--ink);
+      }
+
+      li {
+        margin: 6px 0;
+      }
+
+      .warn {
+        margin-top: 12px;
+        font-size: 0.9rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <section class="card">
+        <h1>Safety Officer Log Mobile Test</h1>
+        <p>Tap the button below to open the app and start testing from your phone.</p>
+
+        <a id="openLink" class="btn" href="/" target="_self" rel="noopener">Open App</a>
+
+        <div class="box">
+          <strong>Quick validation</strong>
+          <ol>
+            <li>Create one observation entry and save it.</li>
+            <li>Add one photo and confirm preview appears.</li>
+            <li>Try GPS capture and voice-to-text.</li>
+            <li>Open daily report and verify the new entry is visible.</li>
+          </ol>
+        </div>
+
+        <p class="warn">If features fail, refresh once and allow camera/microphone/location permissions.</p>
+      </section>
+    </div>
+
+    <script>
+      (function () {
+        const params = new URLSearchParams(window.location.search);
+        const appUrl = params.get('app');
+        if (!appUrl) {
+          return;
+        }
+        const openLink = document.getElementById('openLink');
+        if (openLink) {
+          openLink.href = appUrl;
+        }
+      })();
+    </script>
+  </body>
+</html>

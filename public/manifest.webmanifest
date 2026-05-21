@@ -1,0 +1,17 @@
+{
+  "name": "Safety Officer Log",
+  "short_name": "Safety Log",
+  "description": "Record observations during site visits with photos, voice, coordinates, and daily exports.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#071118",
+  "theme_color": "#09171d",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
