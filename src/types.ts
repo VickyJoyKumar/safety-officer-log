@@ -22,10 +22,13 @@ export type SitePlan = {
   name: string
 }
 
+export type ObservationCategory = 'unsafe-condition' | 'good-point'
+
 export type ObservationRecord = {
   id: string
   recordedAt: string
   recordedBy?: string
+  category: ObservationCategory
   locationId: string
   locationName: string
   coordinates: GeoPoint | null

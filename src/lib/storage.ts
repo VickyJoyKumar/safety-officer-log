@@ -106,12 +106,25 @@ function readLegacyJson<T>(key: string, fallback: T) {
   }
 }
 
+function normalizeObservation(record: ObservationRecord): ObservationRecord {
+  return {
+    ...record,
+    category: record.category === 'good-point' ? 'good-point' : 'unsafe-condition',
+  }
+}
+
 async function migrateLegacyData() {
   const legacyLocations = readLegacyJson<LocationItem[]>(LEGACY_LOCATION_KEY, DEFAULT_LOCATIONS)
-  const legacyObservations = readLegacyJson<ObservationRecord[]>(LEGACY_OBSERVATION_KEY, [])
+  const legacyObservations = readLegacyJson<ObservationRecord[]>(LEGACY_OBSERVATION_KEY, []).map(
+    normalizeObservation,
+  )
 
   const currentLocations = await readAll<LocationItem>(LOCATION_STORE)
-  const currentObservations = await readAll<ObservationRecord>(OBSERVATION_STORE)
+  const rawCurrentObservations = await readAll<ObservationRecord>(OBSERVATION_STORE)
+  const currentObservations = rawCurrentObservations.map(normalizeObservation)
+  const needsCurrentNormalization = rawCurrentObservations.some(
+    (record) => record.category !== 'unsafe-condition' && record.category !== 'good-point',
+  )
 
   if (currentLocations.length === 0) {
     await writeAll(LOCATION_STORE, legacyLocations)
@@ -119,6 +132,8 @@ async function migrateLegacyData() {
 
   if (currentObservations.length === 0 && legacyObservations.length > 0) {
     await writeAll(OBSERVATION_STORE, legacyObservations)
+  } else if (needsCurrentNormalization) {
+    await writeAll(OBSERVATION_STORE, currentObservations)
   }
 
   window.localStorage.removeItem(LEGACY_LOCATION_KEY)
@@ -139,7 +154,7 @@ export async function saveLocations(locations: LocationItem[]) {
 }
 
 export async function loadObservations() {
-  return readAll<ObservationRecord>(OBSERVATION_STORE)
+  return (await readAll<ObservationRecord>(OBSERVATION_STORE)).map(normalizeObservation)
 }
 
 export async function saveObservations(observations: ObservationRecord[]) {

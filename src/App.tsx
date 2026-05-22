@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { exportObservationsCsv, triggerPrint, type CsvObservationRow } from './lib/export'
+import {
+  exportObservationsCsv,
+  exportObservationsWord,
+  triggerPrint,
+  type CsvObservationRow,
+} from './lib/export'
+import { buildTemplateReport } from './lib/report-template'
 import {
   DEFAULT_LOCATIONS,
   initializeStorage,
@@ -12,7 +18,14 @@ import {
 } from './lib/storage'
 import { toLocalDateKey, toLocalDateTimeValue } from './lib/text'
 import { refineDictatedText } from './lib/refine'
-import type { GeoPoint, LocationItem, ObservationPhoto, ObservationRecord, SitePlan } from './types'
+import type {
+  GeoPoint,
+  LocationItem,
+  ObservationCategory,
+  ObservationPhoto,
+  ObservationRecord,
+  SitePlan,
+} from './types'
 
 type DictationTarget = 'description' | 'correctionNote'
 
@@ -93,6 +106,7 @@ function App() {
   const [locations, setLocations] = useState<LocationItem[]>(DEFAULT_LOCATIONS)
   const [observations, setObservations] = useState<ObservationRecord[]>([])
   const [locationId, setLocationId] = useState(DEFAULT_LOCATIONS[0]?.id ?? '')
+  const [category, setCategory] = useState<ObservationCategory>('unsafe-condition')
   const [newLocationName, setNewLocationName] = useState('')
   const [description, setDescription] = useState('')
   const [correctionNote, setCorrectionNote] = useState('')
@@ -172,6 +186,8 @@ function App() {
       observations.filter((observation) => toLocalDateKey(new Date(observation.recordedAt)) === reportDate),
     [observations, reportDate],
   )
+
+  const templateReport = useMemo(() => buildTemplateReport(reportRows, reportDate), [reportRows, reportDate])
 
   const recentRows = useMemo(() => observations, [observations])
 
@@ -393,6 +409,7 @@ function App() {
       id: makeId(),
       recordedAt: new Date().toISOString(),
       recordedBy: recordedBy.trim() || 'Not specified',
+      category,
       locationId: finalLocation.id,
       locationName: finalLocation.name,
       coordinates,
@@ -420,6 +437,10 @@ function App() {
 
   const exportCsv = () => {
     exportObservationsCsv(createCsvRows(reportRows, locations), `safety-observations-${reportDate}.csv`)
+  }
+
+  const exportWord = async () => {
+    await exportObservationsWord(templateReport, `safety-observations-${reportDate}.docx`)
   }
 
   const printReport = () => {
@@ -481,6 +502,17 @@ function App() {
           </div>
 
           <div className="field-grid">
+            <label className="field">
+              <span>Observation type</span>
+              <select
+                value={category}
+                onChange={(event) => setCategory(event.target.value as ObservationCategory)}
+              >
+                <option value="unsafe-condition">Unsafe condition</option>
+                <option value="good-point">Good Point</option>
+              </select>
+            </label>
+
             <label className="field">
               <span>Location</span>
               <select value={locationId} onChange={(event) => setLocationId(event.target.value)}>
@@ -803,6 +835,15 @@ function App() {
             <button className="secondary-button" type="button" onClick={printReport}>
               Print / PDF
             </button>
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={() => void exportWord()}
+              disabled={templateReport.rows.length === 0}
+            >
+              <DownloadGlyph />
+              Word export
+            </button>
           </div>
         </div>
 
@@ -812,7 +853,7 @@ function App() {
             <input type="date" value={reportDate} onChange={(event) => setReportDate(event.target.value)} />
           </label>
           <div className="report-summary">
-            <strong>{reportRows.length}</strong>
+            <strong>{templateReport.rows.length}</strong>
             <span>observations for this date</span>
           </div>
         </div>
@@ -843,36 +884,29 @@ function App() {
         ) : null}
 
         <div className="report-stack">
-          {reportRows.length > 0 ? (
+          {templateReport.rows.length > 0 ? (
             <div className="report-table-wrap">
+              <p className="template-report-intro">{templateReport.heading}</p>
               <table className="report-table">
                 <thead>
                   <tr>
-                    <th>#</th>
-                    <th>Recorded at</th>
-                    <th>Recorded by</th>
-                    <th>Location</th>
-                    <th>Coordinates</th>
-                    <th>Observation</th>
-                    <th>Correction note</th>
-                    <th>Photos</th>
-                    <th className="hide-on-print">Actions</th>
+                    <th>{templateReport.columns.location}</th>
+                    <th>{templateReport.columns.observation}</th>
+                    <th>{templateReport.columns.image}</th>
+                    <th>{templateReport.columns.recommendations}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {reportRows.map((item, index) => (
+                  {templateReport.rows.map((item) => (
                     <tr key={item.id}>
-                      <td>{index + 1}</td>
-                      <td>{new Date(item.recordedAt).toLocaleString()}</td>
-                      <td>{item.recordedBy?.trim() || 'Not specified'}</td>
-                      <td>{item.locationName}</td>
                       <td>
-                        {item.coordinates
-                          ? `${item.coordinates.latitude.toFixed(6)}, ${item.coordinates.longitude.toFixed(6)}`
-                          : 'Not captured'}
+                        {item.category === 'good-point' ? <strong>Good Point</strong> : null}
+                        <p>{item.location || '-'}</p>
+                        <button className="ghost-button hide-on-print" type="button" onClick={() => deleteObservation(item.id)}>
+                          Delete
+                        </button>
                       </td>
-                      <td>{item.description}</td>
-                      <td>{item.correctionNote || 'Not added yet'}</td>
+                      <td>{item.observation || '-'}</td>
                       <td>
                         {item.photos.length > 0 ? (
                           <div className="report-table-photos">
@@ -881,14 +915,10 @@ function App() {
                             ))}
                           </div>
                         ) : (
-                          <span>No photos</span>
+                          <span>No image</span>
                         )}
                       </td>
-                      <td className="hide-on-print">
-                        <button className="ghost-button" type="button" onClick={() => deleteObservation(item.id)}>
-                          Delete
-                        </button>
-                      </td>
+                      <td>{item.recommendation}</td>
                     </tr>
                   ))}
                 </tbody>

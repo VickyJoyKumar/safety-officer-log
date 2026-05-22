@@ -12,8 +12,10 @@
     "share": "npx localtunnel --port 4173"
   },
   "dependencies": {
+    "docx": "^9.6.1",
     "react": "^19.2.6",
-    "react-dom": "^19.2.6"
+    "react-dom": "^19.2.6",
+    "unidev": "^0.0.5"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

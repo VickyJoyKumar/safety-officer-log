@@ -495,7 +495,14 @@ h3 {
 .report-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 980px;
+  min-width: 760px;
+}
+
+.template-report-intro {
+  margin: 0;
+  padding: 10px 10px 14px;
+  color: var(--title);
+  font-size: 0.96rem;
 }
 
 .report-table th,
@@ -509,13 +516,36 @@ h3 {
 .report-table th {
   color: var(--title);
   font-size: 0.86rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-weight: 700;
 }
 
 .report-table td {
   color: var(--text);
   font-size: 0.92rem;
+}
+
+.report-table td p {
+  margin: 6px 0;
+}
+
+.report-table th:nth-child(1),
+.report-table td:nth-child(1) {
+  width: 19%;
+}
+
+.report-table th:nth-child(2),
+.report-table td:nth-child(2) {
+  width: 31%;
+}
+
+.report-table th:nth-child(3),
+.report-table td:nth-child(3) {
+  width: 31%;
+}
+
+.report-table th:nth-child(4),
+.report-table td:nth-child(4) {
+  width: 19%;
 }
 
 .report-table-photos {
@@ -588,6 +618,7 @@ h3 {
   #capture-form,
   .report-toolbar,
   .report-panel .inline-actions,
+  .site-hazard-map-container,
   .status-line {
     display: none !important;
   }
