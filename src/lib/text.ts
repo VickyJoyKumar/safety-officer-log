@@ -85,10 +85,14 @@ export function normalizeLegacyHindiText(value: string) {
       return part
     }
 
-    const result = unidev(part, 'hindi', 'Shusha')
-    if (result !== part && /[\u0900-\u097F]/.test(result)) {
-      changed = true
-      return result
+    try {
+      const result = unidev(part, 'hindi', 'Shusha')
+      if (result !== part && /[\u0900-\u097F]/.test(result)) {
+        changed = true
+        return result
+      }
+    } catch {
+      return part
     }
 
     return part

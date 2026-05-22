@@ -83,6 +83,70 @@ function appendTranscript(existing: string, transcript: string) {
   return `${existing.trimEnd()} ${trimmed.charAt(0).toLowerCase()}${trimmed.slice(1)}`
 }
 
+function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = () => reject(reader.error)
+    reader.readAsDataURL(file)
+  })
+}
+
+function loadImage(url: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image()
+    image.onload = () => resolve(image)
+    image.onerror = () => reject(new Error('Failed to load image'))
+    image.src = url
+  })
+}
+
+function canvasToJpegDataUrl(canvas: HTMLCanvasElement, quality: number) {
+  return new Promise<string>((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          reject(new Error('Failed to create image blob'))
+          return
+        }
+
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result as string)
+        reader.onerror = () => reject(reader.error)
+        reader.readAsDataURL(blob)
+      },
+      'image/jpeg',
+      quality,
+    )
+  })
+}
+
+async function optimizeImageDataUrl(file: File) {
+  if (!file.type.startsWith('image/')) {
+    return readFileAsDataUrl(file)
+  }
+
+  const originalDataUrl = await readFileAsDataUrl(file)
+  const image = await loadImage(originalDataUrl)
+
+  const maxDimension = 1600
+  const scale = Math.min(maxDimension / image.width, maxDimension / image.height, 1)
+  const width = Math.max(1, Math.round(image.width * scale))
+  const height = Math.max(1, Math.round(image.height * scale))
+
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+
+  const context = canvas.getContext('2d')
+  if (!context) {
+    return originalDataUrl
+  }
+
+  context.drawImage(image, 0, 0, width, height)
+  return canvasToJpegDataUrl(canvas, 0.82)
+}
+
 function createCsvRows(
   observations: ObservationRecord[],
   locations: LocationItem[],
@@ -264,25 +328,31 @@ function App() {
 
   const enqueueFile = (file: File) => {
     fileReaderQueue.current = fileReaderQueue.current.then(
-      () =>
-        new Promise<void>((resolve) => {
-          const reader = new FileReader()
-          reader.onload = () => {
-            const dataUrl = reader.result as string
-            setPhotos((current) => [
-              ...current,
-              {
-                id: makeId(),
-                name: file.name || `photo-${Date.now()}.jpg`,
-                dataUrl,
-                capturedAt: new Date().toISOString(),
-              },
-            ])
-            resolve()
-          }
-          reader.onerror = () => resolve()
-          reader.readAsDataURL(file)
-        }),
+      async () => {
+        try {
+          const dataUrl = await optimizeImageDataUrl(file)
+          setPhotos((current) => [
+            ...current,
+            {
+              id: makeId(),
+              name: file.name || `photo-${Date.now()}.jpg`,
+              dataUrl,
+              capturedAt: new Date().toISOString(),
+            },
+          ])
+        } catch {
+          const fallbackDataUrl = await readFileAsDataUrl(file)
+          setPhotos((current) => [
+            ...current,
+            {
+              id: makeId(),
+              name: file.name || `photo-${Date.now()}.jpg`,
+              dataUrl: fallbackDataUrl,
+              capturedAt: new Date().toISOString(),
+            },
+          ])
+        }
+      },
     )
   }
 
