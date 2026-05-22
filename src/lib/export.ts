@@ -168,13 +168,6 @@ export async function exportObservationsWord(
   template: TemplateReport,
   fileName: string,
 ) {
-  const heading = new Paragraph({
-    text: template.heading,
-    spacing: {
-      after: 200,
-    },
-  })
-
   const table = new Table({
     width: { size: 9360, type: WidthType.DXA },
     layout: TableLayoutType.FIXED,
@@ -204,10 +197,10 @@ export async function exportObservationsWord(
           children: [
             makeCell(
               [
-                ...(row.category === 'good-point'
-                  ? [new Paragraph({ children: [new TextRun({ text: 'Good Point', bold: true })] })]
-                  : []),
+                new Paragraph({ children: [new TextRun({ text: row.locationDisplay, bold: true })] }),
                 new Paragraph(row.location || '-'),
+                new Paragraph(`By: ${row.recordedBy}`),
+                new Paragraph(`At: ${new Date(row.recordedAt).toLocaleString()}`),
               ],
               1800,
             ),
@@ -223,7 +216,15 @@ export async function exportObservationsWord(
   const doc = new Document({
     sections: [
       {
-        children: [heading, table],
+        children: [
+          new Paragraph({
+            text: template.heading,
+            spacing: {
+              after: 200,
+            },
+          }),
+          table,
+        ],
       },
     ],
   })

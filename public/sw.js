@@ -1,5 +1,5 @@
 const CACHE_NAME = 'safety-officer-log-shell-v1'
-const APP_SHELL_URLS = ['.', 'index.html', 'manifest.webmanifest', 'favicon.svg']
+const APP_SHELL_URLS = ['.', 'index.html', 'manifest.webmanifest', 'favicon.svg', 'icons.svg', 'mobile-test.html']
 
 const toScopePath = (relativePath) => new URL(relativePath, self.registration.scope).pathname
 

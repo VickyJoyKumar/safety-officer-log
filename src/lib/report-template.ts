@@ -3,7 +3,10 @@ import { normalizeLegacyHindiText } from './text'
 
 export type TemplateReportRow = {
   id: string
+  recordedAt: string
+  recordedBy: string
   category: ObservationRecord['category']
+  locationDisplay: string
   location: string
   observation: string
   recommendation: string
@@ -51,7 +54,11 @@ export function buildTemplateReport(observations: ObservationRecord[], reportDat
     },
     rows: observations.map((observation) => ({
       id: observation.id,
+      recordedAt: observation.recordedAt,
+      recordedBy: observation.recordedBy?.trim() || 'Not specified',
       category: observation.category,
+      locationDisplay:
+        observation.category === 'good-point' ? 'Good Point' : 'Unsafe condition',
       location: normalizeLegacyHindiText(observation.locationName),
       observation: normalizeLegacyHindiText(observation.description),
       recommendation:

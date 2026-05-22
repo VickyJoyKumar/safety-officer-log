@@ -13,5 +13,33 @@
       "sizes": "any",
       "type": "image/svg+xml"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "New observation",
+      "short_name": "Record",
+      "description": "Jump straight to the observation form.",
+      "url": "./#capture-form",
+      "icons": [
+        {
+          "src": "favicon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Daily report",
+      "short_name": "Report",
+      "description": "Open the daily report preview.",
+      "url": "./#daily-report",
+      "icons": [
+        {
+          "src": "favicon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
   ]
 }

@@ -64,6 +64,11 @@ type WindowWithSpeech = Window & {
   webkitSpeechRecognition?: SpeechRecognitionConstructor
 }
 
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>
+}
+
 const todayKey = toLocalDateKey(new Date())
 
 function makeId() {
@@ -167,6 +172,10 @@ function createCsvRows(
 }
 
 function App() {
+  const [isOnline, setIsOnline] = useState(
+    typeof navigator === 'undefined' ? true : navigator.onLine,
+  )
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [locations, setLocations] = useState<LocationItem[]>(DEFAULT_LOCATIONS)
   const [observations, setObservations] = useState<ObservationRecord[]>([])
   const [locationId, setLocationId] = useState(DEFAULT_LOCATIONS[0]?.id ?? '')
@@ -239,6 +248,38 @@ function App() {
       recognitionRef.current = null
     }
   }, [dictating])
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true)
+    const handleOffline = () => setIsOnline(false)
+
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (event: Event) => {
+      event.preventDefault()
+      setInstallPrompt(event as BeforeInstallPromptEvent)
+    }
+
+    const handleAppInstalled = () => {
+      setInstallPrompt(null)
+    }
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+    window.addEventListener('appinstalled', handleAppInstalled)
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+      window.removeEventListener('appinstalled', handleAppInstalled)
+    }
+  }, [])
 
   const selectedLocation = useMemo(
     () => locations.find((location) => location.id === locationId) ?? locations[0],
@@ -517,6 +558,16 @@ function App() {
     triggerPrint()
   }
 
+  const installApp = async () => {
+    if (!installPrompt) {
+      return
+    }
+
+    await installPrompt.prompt()
+    await installPrompt.userChoice
+    setInstallPrompt(null)
+  }
+
   const isInsecureRemote =
     window.location.protocol === 'http:' &&
     window.location.hostname !== 'localhost' &&
@@ -541,6 +592,11 @@ function App() {
           <button className="secondary-button" type="button" onClick={() => document.getElementById('daily-report')?.scrollIntoView({ behavior: 'smooth' })}>
             Review daily report
           </button>
+          {installPrompt ? (
+            <button className="secondary-button" type="button" onClick={() => void installApp()}>
+              Install app
+            </button>
+          ) : null}
         </div>
 
         <div className="stats-row">
@@ -556,6 +612,15 @@ function App() {
             <span>Photos</span>
             <strong>{totalPhotos}</strong>
           </article>
+        </div>
+
+        <div className={`offline-banner ${isOnline ? 'is-online' : 'is-offline'}`}>
+          <strong>{isOnline ? 'Offline ready' : 'Offline mode active'}</strong>
+          <p>
+            {isOnline
+              ? 'Once this app is opened online at least once, the shell stays available without signal.'
+              : 'You can continue recording observations locally until the connection comes back.'}
+          </p>
         </div>
 
         {statusMessage ? <p className="status-line">{statusMessage}</p> : null}
@@ -955,45 +1020,76 @@ function App() {
 
         <div className="report-stack">
           {templateReport.rows.length > 0 ? (
-            <div className="report-table-wrap">
-              <p className="template-report-intro">{templateReport.heading}</p>
-              <table className="report-table">
-                <thead>
-                  <tr>
-                    <th>{templateReport.columns.location}</th>
-                    <th>{templateReport.columns.observation}</th>
-                    <th>{templateReport.columns.image}</th>
-                    <th>{templateReport.columns.recommendations}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {templateReport.rows.map((item) => (
-                    <tr key={item.id}>
-                      <td>
-                        {item.category === 'good-point' ? <strong>Good Point</strong> : null}
-                        <p>{item.location || '-'}</p>
-                        <button className="ghost-button hide-on-print" type="button" onClick={() => deleteObservation(item.id)}>
-                          Delete
-                        </button>
-                      </td>
-                      <td>{item.observation || '-'}</td>
-                      <td>
-                        {item.photos.length > 0 ? (
-                          <div className="report-table-photos">
-                            {item.photos.map((photo) => (
-                              <img key={photo.id} src={photo.dataUrl} alt={photo.name} />
-                            ))}
-                          </div>
-                        ) : (
-                          <span>No image</span>
-                        )}
-                      </td>
-                      <td>{item.recommendation}</td>
+            <>
+              <div className="template-preview-shell">
+                <div className="template-preview-page">
+                  <p className="template-report-intro template-report-intro--screen">{templateReport.heading}</p>
+                  <div className="template-preview-table-wrap">
+                    <table className="report-table template-preview-table">
+                      <thead>
+                        <tr>
+                          <th>{templateReport.columns.location}</th>
+                          <th>{templateReport.columns.observation}</th>
+                          <th>{templateReport.columns.image}</th>
+                          <th>{templateReport.columns.recommendations}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {templateReport.rows.map((item) => (
+                          <tr key={item.id}>
+                            <td>
+                              <strong>{item.locationDisplay}</strong>
+                              <p>{item.location || '-'}</p>
+                            </td>
+                            <td>{item.observation || '-'}</td>
+                            <td>
+                              {item.photos.length > 0 ? (
+                                <div className="report-table-photos">
+                                  {item.photos.map((photo) => (
+                                    <img key={photo.id} src={photo.dataUrl} alt={photo.name} />
+                                  ))}
+                                </div>
+                              ) : (
+                                <span>No image</span>
+                              )}
+                            </td>
+                            <td>{item.recommendation}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <div className="report-table-wrap report-table-details">
+                <p className="template-report-intro">Observation details</p>
+                <table className="report-table">
+                  <thead>
+                    <tr>
+                      <th>Observed by</th>
+                      <th>Recorded at</th>
+                      <th>Type</th>
+                      <th>Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {templateReport.rows.map((item) => (
+                      <tr key={item.id}>
+                        <td>{item.recordedBy}</td>
+                        <td>{new Date(item.recordedAt).toLocaleString()}</td>
+                        <td>{item.locationDisplay}</td>
+                        <td>
+                          <button className="ghost-button hide-on-print" type="button" onClick={() => deleteObservation(item.id)}>
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           ) : (
             <div className="empty-state">
               <h3>No observations for this date yet.</h3>
